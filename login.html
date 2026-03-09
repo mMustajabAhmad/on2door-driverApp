@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Login</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page">
+    <div class="shell narrow">
+      <h1>Driver Login</h1>
+      <p class="subtitle">Sign in as a driver. The returned JWT is saved and then used by the driver app automatically.</p>
+
+      <div id="loginStatus" class="status neutral">Waiting for sign in</div>
+
+      <div class="section">
+        <h2>Credentials</h2>
+        <p class="hint" id="environmentHint"></p>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="driver@example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="password-field">
+            <input type="password" id="password" placeholder="Enter password">
+            <button id="togglePasswordBtn" type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+              <svg id="eyeOpenIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg id="eyeClosedIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <path d="M3 3l18 18"></path>
+                <path d="M10.58 10.58A2 2 0 0 0 12 16a2 2 0 0 0 1.42-.58"></path>
+                <path d="M9.88 5.09A9.77 9.77 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-5.17 5.94"></path>
+                <path d="M6.61 6.61A21.75 21.75 0 0 0 1 12s4 7 11 7a10.76 10.76 0 0 0 5.39-1.39"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button id="loginBtn" type="button">Login</button>
+        </div>
+      </div>
+
+      <p class="footer-link">Already signed in? <a href="./index.html">Open the driver app</a></p>
+    </div>
+  </div>
+
+  <script src="./runtime-config.js"></script>
+  <script src="./common.js"></script>
+  <script>
+    const statusEl = document.getElementById('loginStatus');
+    const environmentHintEl = document.getElementById('environmentHint');
+    const emailEl = document.getElementById('email');
+    const passwordEl = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const eyeOpenIcon = document.getElementById('eyeOpenIcon');
+    const eyeClosedIcon = document.getElementById('eyeClosedIcon');
+
+    function setStatus(type, message) {
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+
+    function renderEnvironmentHint() {
+      environmentHintEl.textContent = `Using API ${getApiBaseUrl()} and WebSocket ${getWsBaseUrl()} from driver-app/.env`;
+    }
+
+    function togglePasswordVisibility() {
+      const showingPassword = passwordEl.type === 'text';
+
+      passwordEl.type = showingPassword ? 'password' : 'text';
+      togglePasswordBtn.setAttribute('aria-label', showingPassword ? 'Show password' : 'Hide password');
+      togglePasswordBtn.setAttribute('aria-pressed', String(!showingPassword));
+      eyeOpenIcon.style.display = showingPassword ? '' : 'none';
+      eyeClosedIcon.style.display = showingPassword ? 'none' : '';
+    }
+
+    async function login() {
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+
+      if (!email || !password) {
+        setStatus('disconnected', 'Enter email and password');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      setStatus('neutral', 'Signing in...');
+
+      try {
+        const payload = await driverApiFetch('/driver/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            driver: { email, password }
+          })
+        });
+
+        const driver = normalizeDriverPayload(payload);
+        const token = driver?.auth_token;
+
+        if (!driver || !token) {
+          throw new Error('Login succeeded but no auth token was returned.');
+        }
+
+        setDriverSession(driver, token);
+        setStatus('connected', `Signed in as ${driverDisplayName(driver)}`);
+
+        setTimeout(() => {
+          window.location.href = './index.html';
+        }, 500);
+      } catch (error) {
+        setStatus('disconnected', `Login failed: ${error.message}`);
+      } finally {
+        loginBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', login);
+    togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+
+    passwordEl.addEventListener('keydown', event => {
+      if (event.key === 'Enter') login();
+    });
+
+    const existingSession = getDriverSession();
+
+    if (existingSession.token && existingSession.driver) {
+      window.location.href = './index.html';
+    } else {
+      renderEnvironmentHint();
+    }
+  </script>
+</body>
+</html>
