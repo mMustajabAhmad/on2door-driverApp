@@ -3,13 +3,29 @@ const DRIVER_APP_STORAGE_KEYS = {
   currentDriver: 'driverApp.currentDriver'
 };
 
-const DRIVER_APP_DEFAULTS = {
-  apiBaseUrl: 'http://localhost:3000/api/v1',
-  wsBaseUrl: 'ws://localhost:3000/cable'
-};
+function getEnvironmentConfig() {
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin || '';
+    const isLocal = origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
 
-function getRuntimeConfig() {
-  return window.DRIVER_APP_RUNTIME_CONFIG || {};
+    if (isLocal) {
+      return {
+        apiBaseUrl: 'http://localhost:3000/api/v1',
+        wsBaseUrl: 'ws://localhost:3000/cable'
+      };
+    }
+
+    return {
+      apiBaseUrl: 'https://on2door-api.onrender.com/api/v1',
+      wsBaseUrl: 'wss://on2door-api.onrender.com/cable'
+    };
+  }
+
+  // Fallback for non-browser contexts
+  return {
+    apiBaseUrl: 'https://on2door-api.onrender.com/api/v1',
+    wsBaseUrl: 'wss://on2door-api.onrender.com/cable'
+  };
 }
 
 function readJson(key) {
@@ -39,11 +55,11 @@ function clearDriverSession() {
 }
 
 function getApiBaseUrl() {
-  return (getRuntimeConfig().apiBaseUrl || DRIVER_APP_DEFAULTS.apiBaseUrl).replace(/\/$/, '');
+  return getEnvironmentConfig().apiBaseUrl.replace(/\/$/, '');
 }
 
 function getWsBaseUrl() {
-  return (getRuntimeConfig().wsBaseUrl || DRIVER_APP_DEFAULTS.wsBaseUrl).replace(/\/$/, '');
+  return getEnvironmentConfig().wsBaseUrl.replace(/\/$/, '');
 }
 
 function normalizeDriverPayload(payload) {
