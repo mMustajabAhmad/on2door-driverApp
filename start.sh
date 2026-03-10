@@ -11,22 +11,12 @@ if [ -f ".env" ]; then
 fi
 
 PORT="${PORT:-4173}"
-DRIVER_APP_API_BASE_URL="${DRIVER_APP_API_BASE_URL:-http://localhost:3000/api/v1}"
-DRIVER_APP_WS_BASE_URL="${DRIVER_APP_WS_BASE_URL:-ws://localhost:3000/cable}"
 URL="http://localhost:${PORT}/login.html"
-
-cat > runtime-config.js <<EOF
-window.DRIVER_APP_RUNTIME_CONFIG = {
-  apiBaseUrl: "${DRIVER_APP_API_BASE_URL}",
-  wsBaseUrl: "${DRIVER_APP_WS_BASE_URL}"
-};
-EOF
 
 echo "Starting Driver App on ${URL}..."
 echo "Serving static files from $(pwd)"
 echo ""
-echo "Using API Base URL: ${DRIVER_APP_API_BASE_URL}"
-echo "Using WebSocket URL: ${DRIVER_APP_WS_BASE_URL}"
+echo "Environment is auto-detected in the browser (localhost -> :3000, deployed -> on2door-api)."
 echo "Make sure the Rails API is running"
 echo "Opening the driver login page in your browser..."
 
